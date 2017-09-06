@@ -543,7 +543,7 @@ add a marker with a popup text.
 			 * The `no-inertia` attribute disables panning of the map will have an inertia effect where the map builds momentum while dragging and continues moving in the same direction for some time. Feels especially nice on touch devices.
 			 *
 			 * @attribute no-inertia
-			 * @type
+			 * @type bool
 			 */
 			noInertia: {
 		    	 type: Boolean,
@@ -614,7 +614,7 @@ add a marker with a popup text.
 		      */
 		     fitToMarkers: {
 		    	 type: Boolean,
-		    	 value: false,
+		    	 value: true,
 		    	 observer: '_fitToMarkers'
 		     }
 		},
@@ -627,7 +627,7 @@ add a marker with a popup text.
 		 */
 		map: undefined,
 
-		ready: function() {
+		attached: function() {
 			// TODO09: Workaround for removed domReady event
 			var me = this;
 			setTimeout(function() {me.domReady()}, 1);
@@ -704,7 +704,7 @@ add a marker with a popup text.
 				this.zoom = map.getZoom();
 			}, this);
 
-			if (this.zoom == -1) {
+			if (this.zoom === -1) {
 				this.map.fitWorld();
 			}
 
