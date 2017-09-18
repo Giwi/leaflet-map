@@ -26,7 +26,8 @@
   ],
   "dependencies": {
     "polymer": "Polymer/polymer#^2.0.0",
-    "leaflet": "^1.2.0"
+    "leaflet": "^1.2.0",
+    "Leaflet.GridLayer.GoogleMutant": "https://gitlab.com/IvanSanchez/Leaflet.GridLayer.GoogleMutant.git"
   },
   "devDependencies": {
     "iron-ajax": "PolymerElements/iron-ajax#^2.0.5"
