@@ -632,28 +632,41 @@ add a marker with a popup text.
 
       googleApiKey: {
         type: String
+      },    
+      /**
+        * reference to the leaflet map
+        *
+        * @property map
+        * @type L.map
+        */
+      map: {
+        type: Object
       }
     },
 
-    /**
-     * reference to the leaflet map
-     *
-     * @property map
-     * @type L.map
-     */
-    map: undefined,
-    connectedCallback: function() {
+
+    attached: function() {
       this._isAttached = true;
-      var me = this;
-      if (window.google || !this.useGoogleMap || !this.googleApiKey) {
-        me.domReady()
+
+      if (this.useGoogleMap && this.googleApiKey ) {
+        console.log('[leaflet-core] attached - Go grab the dependencies!', this.googleApiKey);
+        let chain = Promise.resolve();
+
+        chain.
+          then(this._getDependency(this._getDependencyPromiseResolve(
+            'google.maps', 
+            `https://maps.googleapis.com/maps/api/js?libraries=maps&key=${this.googleApiKey}`))).
+          then(this._getDependency(this._getDependencyPromiseResolve(
+            'L.GridLayer.GoogleMutant', 
+            `https://unpkg.com/leaflet.gridlayer.googlemutant@latest/Leaflet.GoogleMutant.js`))).
+          then(this.domReady.bind(this));
+
       } else {
-        me._loadScript("https://maps.googleapis.com/maps/api/js?libraries=maps&key=" + this.googleApiKey, function() {
-          me._loadScript("https://unpkg.com/leaflet.gridlayer.googlemutant@latest/Leaflet.GoogleMutant.js", function() {
-            me.domReady()
-          });
-        });
+        this.useGoogleMap = false; // Without API key, fallback to OSM, so Google is not used
+        console.log('[leaflet-core] attached - Using OSM default', this.googleApiKey);
+        this.domReady();
       }
+
     },
 
     guessLeafletImagePath: function() {
@@ -676,7 +689,8 @@ add a marker with a popup text.
       }
     },
 
-    domReady: function() {
+    domReady: function() { 
+      console.log('[leaflet-core] domReady');
       this.guessLeafletImagePath();
       var map = L.map(this.$.map, {
         minZoom: this.minZoom,
@@ -705,7 +719,7 @@ add a marker with a popup text.
 
       this.map = map;
 
-      if (this.useGoogleMap) {
+      if (this.useGoogleMap) {   
         var roads = L.gridLayer.googleMutant({
           type: 'roadmap' // valid values are 'roadmap', 'satellite', 'terrain' and 'hybrid'
         }).addTo(map);
@@ -789,6 +803,87 @@ add a marker with a popup text.
         }
       }
     },
+
+
+    _getDependency: function(resolve) {
+      console.log('[leaflet-core] _getDependency');
+      return () => { return new Promise(resolve); };
+    },
+
+    _windowHasObject: function(name) {
+      let items = name.split('.');
+      let obj = 'window';
+      for (let i in items) {
+        obj += `.${items[i]}`
+        if (eval(obj) == undefined) {
+          return false;
+        }
+      }
+      return true;
+    },
+
+    /**
+     * @param {string} name
+     * @param {string} url 
+     * @return {void}
+     * @private
+     */
+    _getDependencyPromiseResolve:function (name, url) {
+      return (resolve) => {
+        console.log('[leaflet-core] _getDependencyPromiseResolve', name, url);
+        if (!this._windowHasObject(name)) {
+          if (!window[`_downloading_${name}`]) {
+            window[`_downloading_${name}`] = true;
+            this._loadDependency(name, url, resolve);
+          } else {
+            this._waitToLoadDependency(name, url, resolve);
+          }
+        } else {
+          this.dispatchEvent(new CustomEvent('dependency-is-ready',
+            {detail: {name: name, url: url}}));
+          resolve();
+        }
+      };
+    },
+
+
+    /**
+     * @param {string} name
+     * @param {string} url 
+     * @param {function} resolve
+     * @return {void}
+     * @private
+     */    
+     _loadDependency: function(name, url, resolve) {
+      var script = document.createElement('script');
+      script.src = this.resolveUrl(url);
+      script.onload = () => {
+        this._waitToLoadDependency(name, url, resolve);
+      };
+      document.head.appendChild(script);
+    },
+
+
+    /**
+     * @param {string} name
+     * @param {string} url 
+     * @param {function} resolve
+     * @return {void}
+     * @private
+     */    
+     _waitToLoadDependency : function(name, url, resolve) {
+      if (this._windowHasObject(name)) {
+        this.dispatchEvent(new CustomEvent('dependency-is-ready',
+          {detail: {name: name, url: url}}));
+        resolve();
+      } else {
+        window.setTimeout( () => {
+          this._waitToLoadDependency(name, url, resolve);
+        }, 5);
+      }
+    },
+
+
     _loadScript: function(url, callback) {
       var script = document.createElement("script");
       script.type = "text/javascript";
