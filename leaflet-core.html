@@ -1,8 +1,5 @@
 <link rel="import" href="../polymer/polymer.html">
 <link rel="import" href="leaflet-import.html">
-<script type="text/javascript" async defer
-        src="https://maps.googleapis.com/maps/api/js?libraries=maps&key=AIzaSyAm8JheAMSzIc5PE_ZSy5HvUywOrk5pYIc"></script>
-<script src='../Leaflet.GridLayer.GoogleMutant/Leaflet.GoogleMutant.js'></script>
 <!--
 element which defines a leaflet map (<a href="http://leafletjs.com/reference.html#map">Leaflet Reference</a>).
 
@@ -54,7 +51,7 @@ add a marker with a popup text.
 
       :host #map {
         height: 100%;
-        width: 100%
+        width: 100%;
       }
     </style>
     <div id="map"></div>
@@ -366,7 +363,6 @@ add a marker with a popup text.
         type: Number,
         value: -1,
         reflectToAttribute: true,
-        notify: true,
         observer: '_viewChanged'
       },
 
@@ -625,12 +621,17 @@ add a marker with a popup text.
         value: true,
         observer: '_fitToMarkers'
       },
+
       /**
-       * If true debug logs are sent to the console
+       * If true use Google Map
        */
       useGoogleMap: {
         type: Boolean,
         value: false
+      },
+
+      googleApiKey: {
+        type: String
       }
     },
 
@@ -645,9 +646,19 @@ add a marker with a popup text.
     attached: function() {
       // TODO09: Workaround for removed domReady event
       var me = this;
-      setTimeout(function() {
-        me.domReady()
-      }, 1);
+      if (window.google || !this.useGoogleMap || !this.googleApiKey) {
+        setTimeout(function() {
+          me.domReady()
+        }, 1);
+      } else {
+        me._loadScript("https://maps.googleapis.com/maps/api/js?libraries=maps&key=" + this.googleApiKey, function() {
+          me._loadScript("https://unpkg.com/leaflet.gridlayer.googlemutant@latest/Leaflet.GoogleMutant.js", function() {
+            setTimeout(function() {
+              me.domReady()
+            }, 1);
+          });
+        });
+      }
     },
 
 
@@ -655,7 +666,6 @@ add a marker with a popup text.
       if (L.Icon.Default.imagePath) {
         return;
       }
-
       var scripts = document.getElementsByTagName('link'),
           leafletRe = /[\/^]leaflet-map.html$/;
 
@@ -785,7 +795,24 @@ add a marker with a popup text.
         }
       }
     },
-
+    _loadScript: function(url, callback) {
+      var script = document.createElement("script");
+      script.type = "text/javascript";
+      if (script.readyState) {  //IE
+        script.onreadystatechange = function() {
+          if (script.readyState === "loaded" || script.readyState === "complete") {
+            script.onreadystatechange = null;
+            callback();
+          }
+        };
+      } else {  //Others
+        script.onload = function() {
+          callback();
+        };
+      }
+      script.src = url;
+      document.getElementsByTagName("head")[0].appendChild(script);
+    },
     /**
      * Returns a GeoJSON including all the features of the map
      *
