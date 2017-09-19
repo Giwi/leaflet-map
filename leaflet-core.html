@@ -642,25 +642,19 @@ add a marker with a popup text.
      * @type L.map
      */
     map: undefined,
-
-    attached: function() {
-      // TODO09: Workaround for removed domReady event
+    connectedCallback: function() {
+      this._isAttached = true;
       var me = this;
       if (window.google || !this.useGoogleMap || !this.googleApiKey) {
-        setTimeout(function() {
-          me.domReady()
-        }, 1);
+        me.domReady()
       } else {
         me._loadScript("https://maps.googleapis.com/maps/api/js?libraries=maps&key=" + this.googleApiKey, function() {
           me._loadScript("https://unpkg.com/leaflet.gridlayer.googlemutant@latest/Leaflet.GoogleMutant.js", function() {
-            setTimeout(function() {
-              me.domReady()
-            }, 1);
+            me.domReady()
           });
         });
       }
     },
-
 
     guessLeafletImagePath: function() {
       if (L.Icon.Default.imagePath) {
